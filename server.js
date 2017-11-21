@@ -138,7 +138,7 @@ function streamToots () {
       }
 
       parsedContent = Entities.decode(parsedContent)
-      let postedTweet = postTweet(parsedContent)
+      let postedTweet = postTweet(parsedContent, null)
       Tweet.sync().then(() => {
         return Tweet.Create({
           tweetID: postedTweet.id,
@@ -166,7 +166,7 @@ function streamToots () {
           }
         }
         parsedContent = Entities.decode(parsedContent)
-        let postedTweet = postTweet(parsedContent)
+        let postedTweet = postTweet(parsedContent, toot.tweetID)
         Tweet.sync().then(() => {
           return Tweet.Create({
             tweetID: postedTweet.id,
