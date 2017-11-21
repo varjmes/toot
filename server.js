@@ -106,6 +106,25 @@ function findByToot (tootID) {
   }
 }
 
+function formatTweet(content){
+  let parsedContent = content.replace(/<\/p>/ig, '\n\n');
+  parsedContent = parsedContent.replace(/<p>/ig, "");
+  parsedContent = parsedContent.replace(/<br \/>/, "\n\n");
+
+  if (parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g)) {
+    let [anchor] = parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g) || []
+
+    if (anchor) {
+      let [href] = anchor.match(/href="([^"]*")/g)
+      href = href.replace('href="', '').replace('"', '')
+      parsedContent = parsedContent.replace(anchor, href)
+    }
+  }
+
+  parsedContent = Entities.decode(parsedContent)
+  return parsedContent;
+}
+
 function streamToots () {
   const stream = M.stream('streaming/user');
   const username = process.env.USERNAME;
@@ -121,24 +140,10 @@ function streamToots () {
         && msg.data.in_reply_to_id === null
         && msg.data.in_reply_to_account_id === null
         && msg.data.reblog === null) {
-      let originalContent = msg.data.content;
-      
-      let parsedContent = originalContent.replace(/<\/p>/ig, '\n\n');
-      parsedContent = parsedContent.replace(/<p>/ig, "");
-      parsedContent = parsedContent.replace(/<br \/>/, "\n\n");
 
-      if (parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g)) {
-          let [anchor] = parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g) || []
+      let content = formatTweet(msg.data.content);
 
-          if (anchor) {
-              let [href] = anchor.match(/href="([^"]*")/g)
-              href = href.replace('href="', '').replace('"', '')
-              parsedContent = parsedContent.replace(anchor, href)
-          }
-      }
-
-      parsedContent = Entities.decode(parsedContent)
-      let postedTweet = postTweet(parsedContent, null)
+      let postedTweet = postTweet(content, null)
       Tweet.sync().then(() => {
         return Tweet.Create({
           tweetID: postedTweet.id,
@@ -150,23 +155,9 @@ function streamToots () {
               && (msg.data.in_reply_to_id != null)
               && msg.data.reblog === null) {
       findByToot(msg.data.in_reply_to_id).then((toot)=>{
-        let originalContent = msg.data.content;
+        let content = formatTweet(msg.data.content);
 
-        let parsedContent = originalContent.replace(/<\/p>/ig, '\n\n');
-        parsedContent = parsedContent.replace(/<p>/ig, "");
-        parsedContent = parsedContent.replace(/<br \/>/, "\n\n");
-
-        if (parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g)) {
-          let [anchor] = parsedContent.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1.+/g) || []
-
-          if (anchor) {
-            let [href] = anchor.match(/href="([^"]*")/g)
-            href = href.replace('href="', '').replace('"', '')
-            parsedContent = parsedContent.replace(anchor, href)
-          }
-        }
-        parsedContent = Entities.decode(parsedContent)
-        let postedTweet = postTweet(parsedContent, toot.tweetID)
+        let postedTweet = postTweet(content, toot.tweetID)
         Tweet.sync().then(() => {
           return Tweet.Create({
             tweetID: postedTweet.id,
